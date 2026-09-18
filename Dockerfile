@@ -3,7 +3,7 @@ FROM docker.io/alpine:latest
 # Set Piwigo and PHP Version
 ARG PHP_VERSION="84"
 ARG PIWIGO_VERSION="16.4.0"
-ARG BUILD_VERSION=${PIWIGO_VERSION}a
+ARG BUILD_VERSION=${PIWIGO_VERSION}c
 
 # Install dependencies
 RUN apk add --update --no-cache \
@@ -23,9 +23,10 @@ RUN apk add --update --no-cache \
 	php${PHP_VERSION}-sysvsem php${PHP_VERSION}-sysvshm php${PHP_VERSION}-tokenizer \
 	php${PHP_VERSION}-xml php${PHP_VERSION}-xmlreader php${PHP_VERSION}-xmlwriter \
 	php${PHP_VERSION}-xsl php${PHP_VERSION}-zip \
-	# External dependencies
-	acl curl exiftool ffmpeg mediainfo ghostscript findutils tzdata postfix \
-	# Imagemagick
+	# Extra dependencies
+	acl curl exiftool findutils icu-data-full postfix tzdata  \
+	# Imagemagick and media editing tools
+	ffmpeg mediainfo ghostscript libheif-plugins-all \
 	imagemagick imagemagick-heic imagemagick-jpeg imagemagick-jxl imagemagick-pango \
 	imagemagick-pdf imagemagick-raw imagemagick-svg imagemagick-tiff imagemagick-webp
 
