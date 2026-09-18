@@ -26,11 +26,11 @@ You can allow only `localhost` or a specific ip by prepending it to `piwigo_port
 
 If you prefer using a `mysql` container instead of `mariadb` edit `compose.yaml` and replace mariadb by mysql (be aware it is case sensitive).
 
-If you want to use an existing MySQL/MariaDB database you already setup, use `compose-nodb.yaml` and rename it `compose.yaml`.
-You can either create `.env` without `piwigo_port=`.
+If you want to use an existing MySQL/MariaDB database you already setup, use `compose-nodb.yaml` and rename it `compose.yaml` and create `.env` file without `db_user_password=`.
 
-Create a script at `./piwigo-data/scripts/user.sh` to run commands before nginx and php start.  
+If you want to install extra packages or run commands before php and nginx start you can create a script in `./piwigo-data/scripts/user.sh`, note that you do not have access to bash but rather ash.  
 eg: to install extra dependencies like pandoc `apk add --no-cache pandoc`, available packages are listed at [alpine pkg index](https://pkgs.alpinelinux.org/packages).  
+
 **Note that the script is run as root**.
 
 ## Container Architeture
@@ -48,4 +48,3 @@ All persistent data is stored in `./piwigo-data/` :
 - `piwigo` piwigo files, when a new version is released, new files will be copied over
 - `mysql` database files from the mariaDB/mysql
 - `scripts` allow user to sideload dependencies and other files outside of piwigo
-
