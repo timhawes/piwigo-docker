@@ -30,16 +30,17 @@ If you want to use an existing MySQL/MariaDB database you already setup, use `co
 
 If you want to install extra packages or run commands before php and nginx start you can create a script in `./piwigo-data/scripts/user.sh`, note that you do not have access to bash but rather ash.  
 eg: to install extra dependencies like pandoc `apk add --no-cache pandoc`, available packages are listed at [alpine pkg index](https://pkgs.alpinelinux.org/packages).  
+PHP is not installed from alpine packages, so `apk add php84-...` will not add PHP extensions. To add one, use `install-php-extensions <name>` in the script instead (see [docker-php-extension-installer](https://github.com/mlocati/docker-php-extension-installer#supported-php-extensions)).  
 
 **Note that the script is run as root**.
 
 ## Container Architeture
 
 Two containers :
-- Alpine with nginx and php-fpm
+- Alpine with nginx and php-fpm, based on the official `php:8.5-fpm-alpine` image
 - MariaDB
 
-PHP modules are installed with alpine natives packages, php-fpm is running with the same user as nginx.
+PHP modules are installed with [docker-php-extension-installer](https://github.com/mlocati/docker-php-extension-installer), php-fpm is running with the same user as nginx.
 
 Container network trafic is internal in the `piwigo-network` bridge.
 

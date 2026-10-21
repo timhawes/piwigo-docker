@@ -1,28 +1,17 @@
-FROM docker.io/alpine:latest
+FROM docker.io/library/php:8.5-fpm-alpine
 
-# Set Piwigo and PHP Version
-ARG PHP_VERSION="84"
+# Set Piwigo version (PHP_VERSION is provided by the base image)
 ARG PIWIGO_VERSION="16.4.0"
 ARG BUILD_VERSION=${PIWIGO_VERSION}c
+ARG PHP_EXTENSION_INSTALLER_VERSION="2.12.0"
+
+# Default timezone, override with the TZ environment variable
+ENV TZ=UTC
 
 # Install dependencies
 RUN apk add --update --no-cache \
-	# s6-overlay Nginx and PHP fpm
-	s6-overlay nginx php${PHP_VERSION} php${PHP_VERSION}-fpm \
-	# PHP dependencies
-	php${PHP_VERSION}-bcmath php${PHP_VERSION}-calendar php${PHP_VERSION}-ctype \
-	php${PHP_VERSION}-curl php${PHP_VERSION}-dom php${PHP_VERSION}-exif \
-	php${PHP_VERSION}-ffi php${PHP_VERSION}-fileinfo php${PHP_VERSION}-ftp \
-	php${PHP_VERSION}-gd php${PHP_VERSION}-gettext php${PHP_VERSION}-iconv \
-	php${PHP_VERSION}-imap php${PHP_VERSION}-intl php${PHP_VERSION}-mbstring \
-	php${PHP_VERSION}-mysqli php${PHP_VERSION}-mysqlnd php${PHP_VERSION}-opcache \
-	php${PHP_VERSION}-openssl php${PHP_VERSION}-pcntl php${PHP_VERSION}-pdo \
-	php${PHP_VERSION}-pdo_mysql php${PHP_VERSION}-phar php${PHP_VERSION}-posix \
-	php${PHP_VERSION}-session php${PHP_VERSION}-shmop php${PHP_VERSION}-simplexml \
-	php${PHP_VERSION}-sockets php${PHP_VERSION}-sodium php${PHP_VERSION}-sysvmsg \
-	php${PHP_VERSION}-sysvsem php${PHP_VERSION}-sysvshm php${PHP_VERSION}-tokenizer \
-	php${PHP_VERSION}-xml php${PHP_VERSION}-xmlreader php${PHP_VERSION}-xmlwriter \
-	php${PHP_VERSION}-xsl php${PHP_VERSION}-zip \
+	# s6-overlay and Nginx
+	s6-overlay nginx \
 	# Extra dependencies
 	acl curl exiftool findutils icu-data-full postfix tzdata  \
 	# Imagemagick and media editing tools
@@ -30,13 +19,16 @@ RUN apk add --update --no-cache \
 	imagemagick imagemagick-heic imagemagick-jpeg imagemagick-jxl imagemagick-pango \
 	imagemagick-pdf imagemagick-raw imagemagick-svg imagemagick-tiff imagemagick-webp
 
+# Install PHP extensions not already built into the base image
+ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/download/${PHP_EXTENSION_INSTALLER_VERSION}/install-php-extensions /usr/local/bin/
+RUN install-php-extensions \
+	bcmath calendar exif ffi ftp gd gettext imap intl mysqli pcntl pdo_mysql \
+	shmop sockets sysvmsg sysvsem sysvshm xsl zip
+
 # Configure PHP-FPM and NGINX
-RUN sed -i "s|;listen.owner\s*=\s*nobody|listen.owner = nginx|g" /etc/php${PHP_VERSION}/php-fpm.d/www.conf \
-	&& sed -i "s|;listen.group\s*=\s*nobody|listen.group = nginx|g" /etc/php${PHP_VERSION}/php-fpm.d/www.conf \
-	&& sed -i "s|user\s*=\s*nobody|user = nginx|g" /etc/php${PHP_VERSION}/php-fpm.d/www.conf \
-	&& sed -i "s|group\s*=\s*nobody|group = nginx|g" /etc/php${PHP_VERSION}/php-fpm.d/www.conf
-COPY ./config/php.ini /etc/php${PHP_VERSION}/conf.d/piwigo.ini
-ENV PHP_VERSION=${PHP_VERSION}
+RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+COPY ./config/php.ini $PHP_INI_DIR/conf.d/piwigo.ini
+COPY ./config/php-fpm.conf /usr/local/etc/php-fpm.d/zz-piwigo.conf
 COPY ./config/nginx.conf /etc/nginx/nginx.conf
 RUN mkdir -p /var/www/html/piwigo /var/www/source/
 RUN chown nginx:nginx /var/www/html/ /var/www/source/
@@ -52,11 +44,13 @@ RUN unzip /tmp/piwigo.zip -d /var/www/source/
 RUN rm -rf /tmp/piwigo.zip
 
 # Add Tagging file
-RUN printf "Official Piwigo container\nPiwigo ${PIWIGO_VERSION}\nPHP ${PHP_VERSION}\nBuild Version ${BUILD_VERSION}" > /var/www/html/piwigo-docker.info
+RUN printf "Unofficial Piwigo container by Tim Hawes\nPiwigo ${PIWIGO_VERSION}\nPHP ${PHP_VERSION}\nBuild Version ${BUILD_VERSION}" > /var/www/html/piwigo-docker.info
 
 # Configure s6-overlay
 USER root
 COPY --chmod=0755 ./config/s6-rc.d/ /etc/s6-overlay/s6-rc.d/
 COPY --chmod=0755 ./config/init-script.sh /init-script.sh
-RUN sed -i "s/{PHP_VERSION}/${PHP_VERSION}/" /etc/s6-overlay/s6-rc.d/php-fpm/run
+# The base image sets CMD ["php-fpm"] and STOPSIGNAL SIGQUIT; s6-overlay supervises php-fpm itself and expects SIGTERM
+STOPSIGNAL SIGTERM
 ENTRYPOINT ["/init"]
+CMD []
