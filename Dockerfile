@@ -1,7 +1,7 @@
 FROM docker.io/library/php:8.5-fpm-alpine
 
 # Set Piwigo version (PHP_VERSION is provided by the base image)
-ARG PIWIGO_VERSION="16.4.0"
+ARG PIWIGO_VERSION="16.5.0"
 ARG BUILD_VERSION=${PIWIGO_VERSION}c
 ARG PHP_EXTENSION_INSTALLER_VERSION="2.12.0"
 
